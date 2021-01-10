@@ -1,5 +1,6 @@
-const router = require('express').Router
-const {notes} = require('../../../db')
+const fs = require('fs')
+const path = require('path')
+const router = require('express').Router()
 
 router.post('/notes', (req, res) => {
   fs.readFile(path.join(__dirname, "../db/db.json"), 'utf8', (err, data) => {
