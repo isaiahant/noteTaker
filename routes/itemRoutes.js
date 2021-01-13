@@ -1,72 +1,84 @@
-const fs = require('fs')
-const path = require('path')
-const router = require('express').Router()
+const path = require('path');
+const fs = require('fs');
 
-router.post('/notes', (req, res) => {
-  fs.readFile(path.join(__dirname, "../db/db.json"), 'utf8', (err, data) => {
-    if (err) {
-      console.log(err)
-    } else {
-      let notes = JSON.parse(data)
-      let note = {
-        id: notes[notes.length - 1].id + 1,
-        ...req.body
+const OUTPUT_DIR = path.resolve(__dirname, "../db");
+outputPath = path.join(OUTPUT_DIR, "db.json");
+
+let notesArray = [];
+let savedNotes = [];
+
+module.exports = function (app) {
+
+  app.get("/api/notes", function (req, res) {
+
+    savedNotes = [];
+
+    fs.readFile(outputPath, 'utf8', (err, data) => {
+      if (err) throw err;
+
+      data = JSON.parse(data)
+
+      for (i = 0; i < data.length; i++) {
+        savedNotes.push(data[i]);
+      }
+      console.log(savedNotes)
+      res.send(savedNotes);
+    });
+  });
+
+  app.post("/api/notes", function (req, res) {
+
+    notesArray = [];
+    notesArray.push(req.body);
+    console.log(req.body);
+
+    fs.readFile(outputPath, 'utf-8', (err, data) => {
+      if (err) throw err;
+
+      data = JSON.parse(data);
+      for (let i = 0; i < data.length; i++) {
+
+        notesArray.push(data[i])
+      }
+
+      for (let i = 0; i < notesArray.length; i++) {
+        notesArray[i].id = i + 1;
 
       }
-      notes.push(note)
-      fs.writeFile(path.join(__dirname, "../db/db.json"), JSON.stringify(notes), (err) => {
+      //exports it 
+      res.send(notesArray);
+      console.log(notesArray);
+
+      fs.writeFile(outputPath, JSON.stringify(notesArray), function (err) {
         if (err) {
-          console.log(err)
+          throw err;
         } else {
-          res.sendStatus(200)
+          console.log("success");
         }
       })
-    }
-  })
-})
+    });
+  }
+  )
 
-router.get('/notes', (req, res)=>{
-  fs.readFile(path.join(__dirname, "../db/db.json"), 'utf8', (err, data) => {
-    if (err) {
-      console.log(err)
-    } else {
-      let notes = JSON.parse(data)
-      res.json(notes)
-    }
-  })
-})
+  app.delete("/api/notes/:id", function (req, res) {
 
-router.delete('/notes/*', (req, res) => {
-  fs.readFile(path.join(__dirname, "../db/db.json"), 'utf8', (err, data) => {
-    if (err) {
-      console.log(err)
-    } else {
-      let notes = JSON.parse(data)
-      let key = parseInt(req.params[0])
-      let found = -1
-      let len = notes.length
-      for (let i = 0; i < len; i++) {
-        if (notes[i].id === key) {
-          found = i
-          i = len
-        }
-      }
-      if (found !== -1) {
-        notes.splice(found, 1)
-      }
-      fs.writeFile(path.join(__dirname, "../db/db.json"), JSON.stringify(notes), (err) => {
-        if (err) {
-          console.log(err)
-        } else {
-          res.sendStatus(200)
-        }
-      })
-    }
-  })
-})
+    notesArray = [];
 
-
-
+    let noteId = req.params.id;
+    console.log(noteId);
 // nice
+    fs.readFile(outputPath, "utf8", (err, data) => {
+      if (err) throw err;
+      notesArray = JSON.parse(data);
 
-module.exports = router
+      const newNotesArray = notesArray.filter(note => note.id != noteId);
+      console.log(newNotesArray);
+
+      fs.writeFile(outputPath, JSON.stringify(newNotesArray) + "\t", err => {
+        if (err) throw err;
+        console.log("deleted");
+        res.send(newNotesArray)
+      })
+    })
+  });
+}
